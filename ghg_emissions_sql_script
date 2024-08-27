@@ -1,0 +1,195 @@
+-- Creating the ghg emissions & gni tables in which we'll import the data
+
+CREATE TABLE ghg_emissions (
+	country varchar(50) NOT NULL, 
+	country_code varchar(3) NOT NULL,
+	sector varchar(30),
+	substance varchar(20),
+	year_obs smallint,
+	total_emissions numeric(20,5)
+	
+	CONSTRAINT country_code_length CHECK (char_length(country_code) = 3)
+);
+
+CREATE TABLE gni_per_capita (
+	country varchar(80) NOT NULL,
+	country_code varchar(3) NOT NULL,
+	year_obs smallint NOT NULL,
+	gni_capita_usd numeric(20,3) 
+
+CONSTRAINT country_code_length CHECK (char_length(country_code) = 3)
+);
+
+-- Quick data integrity checks
+
+SELECT * 
+FROM gni_per_capita
+WHERE country_code = 'USA'
+ORDER BY gni_capita_usd DESC;
+
+
+
+-- Checking the number of rows and distinct categories in the columns
+SELECT COUNT(*) as num_rows,
+	COUNT(DISTINCT country) AS num_country, 
+	COUNT(DISTINCT country_code) AS num_code, 
+	COUNT(DISTINCT sector) AS num_secs, 
+	COUNT(DISTINCT substance) AS num_subs, 
+	COUNT(DISTINCT year_obs) AS num_years
+FROM ghg_emissions;
+
+
+-- Creating copies of the datasets.
+CREATE TABLE ghg_emissions_bp AS
+SELECT * FROM ghg_emissions;
+
+
+CREATE TABLE gni_per_capita_bp AS
+SELECT * FROM gni_per_capita;
+
+
+-- Finding all of the mismatched 
+SELECT DISTINCT(country), country_code
+FROM ghg_emissions_bp
+WHERE country ILIKE '%?%';
+
+-- Fix the country names
+UPDATE ghg_emissions_bp
+SET country = 'Réunion'
+WHERE country = 'R?union';
+
+UPDATE ghg_emissions_bp
+SET country = 'Türkiye'
+WHERE country = 'T?rkiye';
+
+UPDATE ghg_emissions_bp
+SET country = 'Côte d’Ivoire'
+WHERE country = 'C?te d’Ivoire';
+
+UPDATE ghg_emissions_bp
+SET country = 'São Tomé and Príncipe'
+WHERE country = 'S?o Tom? and Pr?ncipe';
+
+UPDATE ghg_emissions_bp
+SET country = 'Curaçao'
+WHERE country = 'Cura?ao';
+
+
+-- Deciding on the primary and foreign keys
+SELECT
+	DISTINCT ghg.country AS edgar_country,
+	gni.country AS wb_country,
+	ghg.country_code AS edgar_code,
+	gni.country_code AS wb_code
+FROM ghg_emissions_bp AS ghg
+LEFT JOIN gni_per_capita_bp AS gni
+ON ghg.country_code=gni.country_code AND ghg.year_obs=gni.year_obs
+WHERE ghg.country <> gni.country
+ORDER BY ghg.country;
+
+/*
+Data Analysis Phase
+
+Question 1: What were the total GHG emissions for low, lower-middle, upper-middle, and high-income countries in 2022?
+*/
+
+
+-- Adding a new column for income classification based on GNI Per capita based on 2022 figures
+ALTER TABLE gni_per_capita_bp 
+ADD COLUMN income_classification varchar(30);
+
+
+WITH gni_2022 AS (
+    SELECT country, gni_capita_usd
+    FROM gni_per_capita_bp
+    WHERE year_obs = 2022
+)
+UPDATE gni_per_capita_bp
+SET income_classification = CASE
+    WHEN gni_2022.gni_capita_usd <= 1135 THEN 'Low Income'
+    WHEN gni_2022.gni_capita_usd BETWEEN 1136 AND 4465 THEN 'Lower-Middle Income'
+    WHEN gni_2022.gni_capita_usd BETWEEN 4466 AND 13845 THEN 'Upper-Middle Income'
+    WHEN gni_2022.gni_capita_usd > 13845 THEN 'High Income'
+    ELSE NULL
+END
+FROM gni_2022
+WHERE gni_per_capita_bp.country = gni_2022.country;
+
+
+-- Joining the gni database on the ghg emissions database & the answer to Question 1
+SELECT income_classification, 
+	ROUND(SUM(total_emissions),2) AS total_ems_22
+FROM	(
+		SELECT
+			ghg.*,
+			gni.income_classification
+		FROM ghg_emissions_bp AS ghg
+		LEFT JOIN gni_per_capita_bp AS gni
+		ON ghg.country_code=gni.country_code AND ghg.year_obs=gni.year_obs
+		ORDER BY ghg.country, ghg.year_obs, ghg.sector
+) AS subs
+WHERE year_obs = 2022
+GROUP BY income_classification
+ORDER BY total_ems_22 DESC;
+
+
+
+--Question 2: Which were the top 10 highest GHG emitting countries from 2010 to 2022?
+SELECT country, 
+		ROUND(SUM(total_emissions),2) AS total_ghg_ems
+FROM ghg_emissions_bp
+WHERE year_obs BETWEEN 2010 AND 2022
+GROUP BY country
+ORDER BY total_ghg_ems DESC
+LIMIT 10;
+
+-- Question 3: Which sector contributed the most to GHG emissions each year from 2000 to 2022?
+WITH yearly_emissions AS (
+    SELECT 
+        year_obs,
+        sector,
+        SUM(total_emissions) AS total_emissions_sum
+    FROM ghg_emissions_bp
+    GROUP BY year_obs, sector
+),
+	
+max_emissions_by_year AS (
+    SELECT 
+        year_obs,
+        MAX(total_emissions_sum) AS max_total_emissions
+    FROM yearly_emissions
+	WHERE year_obs BETWEEN 2000 AND 2022
+    GROUP BY year_obs
+)
+SELECT 
+    ye.year_obs,
+    ye.sector,
+    ROUND(ye.total_emissions_sum,2) AS total_ems
+FROM yearly_emissions ye
+JOIN max_emissions_by_year me
+ON ye.year_obs = me.year_obs AND ye.total_emissions_sum = me.max_total_emissions
+ORDER BY ye.year_obs;
+
+-- Question 4: What was the proportion of GHG emissions by substance for the United States and China in 2022?
+SELECT country, 
+		substance, 
+	ROUND(SUM(total_emissions),2) AS total_ems,
+	ROUND(SUM(total_emissions) * 100.0 / SUM(SUM(total_emissions)) OVER (PARTITION BY country),2) AS percentage_of_total
+FROM ghg_emissions_bp AS ghg
+WHERE (country_code = 'CHN' OR country_code = 'USA') AND year_obs = 2022
+GROUP BY country, substance
+ORDER BY country, total_ems DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
