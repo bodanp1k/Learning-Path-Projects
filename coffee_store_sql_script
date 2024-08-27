@@ -1,0 +1,189 @@
+
+-- Creating the empty tables 
+
+CREATE TABLE products (
+		product_id varchar(30) PRIMARY KEY,
+		coffee_type varchar(10),
+		roast_type varchar(1),
+		bag_size decimal,
+		unit_price decimal,
+		price_per_100 decimal,
+		profit decimal
+);
+
+CREATE TABLE customers (
+		customer_id varchar(30) PRIMARY KEY,
+		customer_name varchar(100),
+		email varchar(100),
+		phone_number varchar(50),
+		address_line varchar(120),
+		city varchar(50),
+		country varchar(50),
+		postcode varchar (50),
+		loyalty_card boolean
+);
+
+
+CREATE TABLE orders (
+		order_id varchar(50),
+		order_date date,
+		customer_id varchar(50),
+		product_id varchar(50),
+		quantity int,	
+		FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+		FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+
+
+-- Question 1: What are the year-over-year growth rates for total sales and gross profit from 2019 to 2021?
+WITH yearly_sales AS (
+SELECT EXTRACT(YEAR FROM DATE_TRUNC('year', ord.order_date))::INT AS order_year, 
+		SUM(ord.quantity * pr.unit_price) AS total_sales,
+		SUM(ord.quantity * pr.profit) AS total_profit
+FROM products AS pr
+JOIN orders AS ord
+ON pr.product_id = ord.product_id
+JOIN customers AS cu
+ON ord.customer_id = cu.customer_id
+GROUP BY order_year
+ORDER BY 1 ASC
+)
+	SELECT 
+	order_year, 
+	total_sales,
+	ROUND(((total_sales - LAG(total_sales) OVER (ORDER BY order_year)) / (LAG(total_sales) OVER (ORDER BY order_year))*100),2) AS sales_growth_rate,
+	total_profit,
+	ROUND(((total_profit - LAG(total_profit) OVER (ORDER BY order_year)) / (LAG(total_profit) OVER (ORDER BY order_year))*100),2) AS profit_growth_rate
+	FROM yearly_sales
+	WHERE order_year BETWEEN 2019 AND 2021
+
+
+-- Question 2: Is there monthly seasonality in sales?
+SELECT EXTRACT(MONTH FROM ord.order_date)::INT AS order_month, 
+       SUM(ord.quantity * pr.unit_price) AS total_sales,
+       EXTRACT(YEAR FROM ord.order_date) AS order_year
+FROM products AS pr
+JOIN orders AS ord ON pr.product_id = ord.product_id
+JOIN customers AS cu ON ord.customer_id = cu.customer_id
+GROUP BY EXTRACT(MONTH FROM ord.order_date), EXTRACT(YEAR FROM ord.order_date)
+HAVING NOT (EXTRACT(YEAR FROM ord.order_date) = 2022 AND EXTRACT(MONTH FROM ord.order_date) = 8)
+ORDER BY order_year, order_month;
+
+-- Alternative solution with a WHERE clause and subquery
+SELECT *
+FROM 	
+	(
+	SELECT EXTRACT(MONTH FROM DATE_TRUNC('month', ord.order_date))::INT AS order_month, 
+		SUM(ord.quantity * pr.unit_price) AS total_sales,
+		EXTRACT(YEAR FROM ord.order_date) AS order_year
+	FROM products AS pr
+	JOIN orders AS ord
+	ON pr.product_id = ord.product_id
+	JOIN customers AS cu
+	ON ord.customer_id = cu.customer_id
+	GROUP BY order_month, order_year
+	) AS sub
+WHERE NOT (order_year = 2022 AND order_month = 8)
+ORDER BY  order_year, order_month;
+
+
+-- Question 3: What is the most commonly ordered coffee bag size?
+SELECT pr.bag_size, 
+		COUNT(ord.order_id) AS num_of_orders, 
+		SUM(ord.quantity) AS total_quantity, 
+		ROUND(AVG(ord.quantity),2) AS avg_quantity,
+		SUM(ord.quantity * pr.unit_price) AS total_sales
+FROM products AS pr
+JOIN orders AS ord
+ON pr.product_id = ord.product_id
+GROUP BY pr.bag_size
+ORDER BY num_of_orders DESC;
+
+-- Question 4: Which coffee bag size has the highest average profit margin per unit?
+SELECT bag_size, ROUND(AVG(profit),2) AS avg_gross_profit
+FROM products
+GROUP BY bag_size
+ORDER BY avg_gross_profit DESC
+
+	
+-- Question 5: What are the most ordered coffee type, and what is their proportional contribution to total sales?
+SELECT pr.coffee_type, 
+    COUNT(*) AS order_count_coffee_type, 
+    SUM(ord.quantity * pr.unit_price) AS total_sales_coffee_type, ROUND((SUM(ord.quantity * pr.unit_price) / SUM(SUM(ord.quantity * pr.unit_price)) OVER ()) * 100,2) AS percentage_of_total_sales
+FROM products AS pr
+JOIN orders AS ord ON pr.product_id = ord.product_id
+GROUP BY pr.coffee_type
+ORDER BY order_count_coffee_type DESC;
+
+
+-- Question 6: What are the most ordered roast type, and what is their proportional contribution to total sales?
+SELECT pr.roast_type, 
+    COUNT(*) AS order_count_coffee_type, 
+    SUM(ord.quantity * pr.unit_price) AS total_sales_coffee_type, ROUND((SUM(ord.quantity * pr.unit_price) / SUM(SUM(ord.quantity * pr.unit_price)) OVER ()) * 100,2) AS percentage_of_total_sales
+FROM products AS pr
+JOIN orders AS ord 
+ON pr.product_id = ord.product_id
+GROUP BY pr.roast_type
+ORDER BY order_count_coffee_type DESC;
+
+
+
+-- Question 7: What are the top 10 best-selling products in the country with the highest sales percentage?
+
+-- Finding the country with the highest share 
+WITH top_sales_country AS (
+    SELECT 
+        cu.country
+    FROM products AS pr
+    JOIN orders AS ord ON pr.product_id = ord.product_id
+    JOIN customers AS cu ON ord.customer_id = cu.customer_id
+    GROUP BY cu.country
+    ORDER BY SUM(ord.quantity * pr.unit_price) DESC
+    LIMIT 1
+)
+
+-- Getting the top 10 most sold products in that country
+SELECT 
+    pr.product_id,
+    SUM(ord.quantity) AS total_quantity_sold,
+    SUM(ord.quantity * pr.unit_price) AS total_sales
+FROM products AS pr
+JOIN orders AS ord 
+ON pr.product_id = ord.product_id
+JOIN customers AS cu 
+ON ord.customer_id = cu.customer_id
+WHERE cu.country = (SELECT country FROM top_sales_country)
+GROUP BY pr.product_id
+ORDER BY total_quantity_sold DESC
+LIMIT 10;
+
+
+/*
+
+Loyalty Program Effectiveness
+
+Question 8: What percentage of customers have loyalty cards?  
+*/
+
+SELECT loyalty_card, 
+		COUNT(*), 
+		ROUND((COUNT(*) * 100/ SUM(COUNT(*)) OVER ()),2) AS percentage
+FROM customers
+GROUP BY loyalty_card
+ORDER BY 1 DESC
+
+--  Question 9: How many customers are repeat customers, and do they have loyalty cards?
+WITH repeat_customers AS (
+    SELECT customer_id
+    FROM orders
+    GROUP BY customer_id
+    HAVING COUNT(DISTINCT order_id) > 1
+-- Only 25 customers have placed more than 1 order from the website on different dates
+)
+SELECT 
+    cu.loyalty_card,
+    COUNT(rc.customer_id) AS repeat_customers_count
+FROM repeat_customers AS rc
+JOIN customers AS cu ON rc.customer_id = cu.customer_id
+GROUP BY cu.loyalty_card;
