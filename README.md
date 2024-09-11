@@ -11,3 +11,6 @@ A comprehensive [exploration](https://github.com/bodanp1k/Learning-Path-Projects
 
 ### Sales Performance Dashboard | Microsoft Excel (Pivot Tables):
 A comparative [dashboard](https://github.com/bodanp1k/Learning-Path-Projects/tree/Sales-Performance-Dashboard-%7C-Microsoft-Excel-(Pivot-Tables)) highlighting year-over-year sales performance, enabling stakeholders to filter data by various dimensions and analyze key business metrics like sales, profit, and profit margin.
+
+### Financial Statement Analysis and Reporting | Microsoft Excel (Pivot Tables):
+This project involves a detailed financial analysis and reporting of Company XYZ’s performance over the past five years. It includes extracting, cleaning, and validating accounting data from the ERP system, constructing historical financial statements (Income Statement, Balance Sheet, and Cash Flow Statement), and performing comprehensive horizontal, vertical, and ratio analysis to identify key trends.
