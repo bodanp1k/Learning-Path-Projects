@@ -7,6 +7,6 @@ Key questions:
 3. Sector contributions to emissions from 2000 to 2022.
 4. Proportional emissions by substance for the United States and China in 2022.
 
-The dataset offers many interesting insights that can be uncovered. Explore the interactive [dashboard](https://public.tableau.com/app/profile/bodan.pavlovski/viz/GlobalGreenhouseGasEmissions_17214844967840/Dashboard2) on Tableau Public, as well as the full [article](https://medium.com/@bodanp/data-analysis-portfolio-project-in-sql-tableau-global-greenhouse-gas-emissions-46bc54f86a6d) on Medium.
+The dataset offers many interesting insights that can be uncovered. Explore the interactive [dashboard](https://public.tableau.com/app/profile/bodan.pavlovski/viz/GlobalGreenhouseGasEmissions_17214844967840/Dashboard2) on Tableau Public.
 
 ![ghg_dash](https://i.imgur.com/1CLhbi4.png)
