@@ -1,4 +1,31 @@
-## Sales Performance Dashboard 2022 vs 2023
-This dashboard provides a comparative analysis of sales performance between 2022 and 2023, focusing on total sales, profit, and profit margin. Stakeholders can filter by product category, customer type, state, and region to uncover insights themselves and compare business performance in 2023 versus 2022.
+## Adwenture Works Sales Analysis & Customer Segmentation
+This project involves creating an Excel dashboard for Adventure Works, aimed at analyzing sales performance and customer segmentation from 2021 to 2023.
 
-![dash](https://i.imgur.com/qujxM9K.png)
+### Goals:
+Sales Insights: Provide an overall view of sales trends, key products, and high-performing regions or categories.
+Customer Segmentation: Identify customer segments that are driving sales and uncover patterns based on demographics, such as gender or marital status, to assist in targeted marketing and strategy planning.
+
+### Project Overview: 
+**Data Import and Transformation** (via Power Query):
+
+**Sales Data Consolidation**: Sales data for the years 2021, 2022, and 2023 were imported into Power Query, where the data was cleaned, combined, and transformed into a usable format for analysis.
+Date Dimension Creation: Using M-language, a date dimension table was created to support time-based analysis, ensuring accurate connections between sales data and time periods.
+Data Model Creation:
+
+**Dimension Tables**: Various dimension tables, such as Dim_Customers, Dim_Products, Dim_Territories, and Dim_Calendar, were linked to the central fact table containing sales and return data (Fact_Sales_2021_... and Fact_Returns). These dimension tables provided additional context for the fact data.
+
+**Relationships**: Relationships were established between the fact and dimension tables, creating a star schema to facilitate easy and accurate analysis of sales performance and customer data.
+Analysis Using Pivot Tables:
+
+**Pivot Tables**: Once the data model was set up, pivot tables were created to slice and dice the data. These pivot tables allowed for the analysis of total sales, gross profit, top products, sales by gender, marital status, homeownership, and more.
+
+**DAX (Data Analysis Expressions) calculations** were utilized in the project to perform advanced analysis and derive key metrics, such as calculating total sales, gross profit, gross profit percentage
+
+
+### Final Dashboard
+
+![dash](https://i.imgur.com/7F5FFLC.png)
+
+### Data Model
+
+![model](https://i.imgur.com/gRBgwWo.png)
