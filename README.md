@@ -1,5 +1,5 @@
 # Data Analytics Learning Path Projects
-A collection of hands-on projects from my learning journey in data analytics and business intelligence.
+A collection of hands-on projects from my early learning journey in data analytics and business intelligence.
 
 
 
